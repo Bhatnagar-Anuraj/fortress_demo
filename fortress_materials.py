@@ -1,7 +1,7 @@
 """
 fortress_materials.py -- Material creation and assignment for fortress.
 ========================================================================
-DIGM 131 - Week 6 Demo | Author: Anuraj Bhatnagar
+DIGM 131 - Week 7 | Author: Anuraj Bhatnagar
 
 Usage:
     import fortress_materials as mat
@@ -44,8 +44,6 @@ def create_material(name, color=(0.5, 0.5, 0.5)):
 
 def assign_material(obj_name, shader_name):
     """Assign a shader to a Maya object or group.
-
-    Handles groups by finding all descendant shapes.
 
     Args:
         obj_name (str):    Transform, shape, or group node.
