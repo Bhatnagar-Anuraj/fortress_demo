@@ -9,6 +9,7 @@ the Maya node name(s). No materials or scene logic here.
 Usage:
     import fortress_geometry as geo
     geo.create_wall(length=16, height=5, position=(0, 0, 8))
+    Make sure you have downloaded fortress_geometry
 """
 
 import maya.cmds as cmds
