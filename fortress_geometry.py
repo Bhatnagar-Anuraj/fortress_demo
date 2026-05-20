@@ -1,18 +1,19 @@
 """
 fortress_geometry.py -- Geometry builders for medieval fortress elements.
 =========================================================================
-DIGM 131 - Week 6 Demo | Author: Anuraj Bhatnagar
+DIGM 131 - Week 7 | Author: Anuraj Bhatnagar
 
-Each function creates one type of fortress element and returns
-the Maya node name(s). No materials or scene logic here.
+Each function creates one type of fortress element with input
+validation and debug logging. No materials or scene logic here.
 
 Usage:
     import fortress_geometry as geo
     geo.create_wall(length=16, height=5, position=(0, 0, 8))
-    Make sure you have downloaded fortress_geometry
 """
 
 import maya.cmds as cmds
+
+DEBUG = True
 
 
 def create_wall(length=10, height=5, thickness=0.5, position=(0, 0, 0)):
@@ -25,15 +26,31 @@ def create_wall(length=10, height=5, thickness=0.5, position=(0, 0, 0)):
         position (tuple):  (x, y, z) center of the wall base.
 
     Returns:
-        str: Name of the wall transform node.
+        str: Name of the wall transform node, or None on failure.
     """
-    wall = cmds.polyCube(
-        w=length, h=height, d=thickness,
-        name="wall_#"
-    )[0]
-    cmds.move(
-        position[0], position[1] + height / 2.0, position[2], wall
-    )
+    if DEBUG:
+        print("[DEBUG] create_wall: l={}, h={}, pos={}".format(
+            length, height, position))
+
+    if length <= 0:
+        cmds.warning("Invalid wall length {} -- using default 10".format(length))
+        length = 10
+    if height <= 0:
+        cmds.warning("Invalid wall height {} -- using default 5".format(height))
+        height = 5
+
+    try:
+        wall = cmds.polyCube(
+            w=length, h=height, d=thickness,
+            name="wall_#"
+        )[0]
+        cmds.move(
+            position[0], position[1] + height / 2.0, position[2], wall
+        )
+    except Exception as error:
+        cmds.warning("Failed to create wall: {}".format(error))
+        return None
+
     return wall
 
 
@@ -52,6 +69,9 @@ def create_merlons(length=10, wall_height=5, merlon_size=0.6,
     Returns:
         list: Names of all merlon transform nodes.
     """
+    if DEBUG:
+        print("[DEBUG] create_merlons: len={}, axis={}".format(length, axis))
+
     merlons = []
     count = int(length / spacing)
     half = length / 2.0
@@ -65,12 +85,15 @@ def create_merlons(length=10, wall_height=5, merlon_size=0.6,
         else:
             mx, mz = position[0], position[2] + offset
 
-        merlon = cmds.polyCube(
-            w=merlon_size, h=merlon_size, d=merlon_size,
-            name="merlon_#"
-        )[0]
-        cmds.move(mx, merlon_y, mz, merlon)
-        merlons.append(merlon)
+        try:
+            merlon = cmds.polyCube(
+                w=merlon_size, h=merlon_size, d=merlon_size,
+                name="merlon_#"
+            )[0]
+            cmds.move(mx, merlon_y, mz, merlon)
+            merlons.append(merlon)
+        except Exception as error:
+            cmds.warning("Failed to create merlon: {}".format(error))
 
     return merlons
 
@@ -84,29 +107,44 @@ def create_tower(radius=1.5, height=8, position=(0, 0, 0)):
         position (tuple): (x, y, z) base center.
 
     Returns:
-        str: Name of the tower group.
+        str: Name of the tower group, or None on failure.
     """
-    body = cmds.polyCylinder(
-        r=radius, h=height,
-        name="tower_body_#"
-    )[0]
-    cmds.move(
-        position[0], position[1] + height / 2.0, position[2], body
-    )
+    if DEBUG:
+        print("[DEBUG] create_tower: r={}, h={}, pos={}".format(
+            radius, height, position))
 
-    roof = cmds.polyCone(
-        r=radius * 1.4, h=radius * 2.0,
-        name="tower_roof_#"
-    )[0]
-    cmds.move(
-        position[0], position[1] + height + radius * 0.8, position[2], roof
-    )
+    if radius <= 0:
+        cmds.warning("Invalid tower radius {} -- using default 1.5".format(radius))
+        radius = 1.5
+    if height <= 0:
+        cmds.warning("Invalid tower height {} -- using default 8".format(height))
+        height = 8
+
+    try:
+        body = cmds.polyCylinder(
+            r=radius, h=height,
+            name="tower_body_#"
+        )[0]
+        cmds.move(
+            position[0], position[1] + height / 2.0, position[2], body
+        )
+
+        roof = cmds.polyCone(
+            r=radius * 1.4, h=radius * 2.0,
+            name="tower_roof_#"
+        )[0]
+        cmds.move(
+            position[0], position[1] + height + radius * 0.8, position[2], roof
+        )
+    except Exception as error:
+        cmds.warning("Failed to create tower: {}".format(error))
+        return None
 
     return cmds.group(body, roof, name="tower_#")
 
 
 def create_keep(width=6, floors=3, floor_height=4, position=(0, 0, 0)):
-    """Create a central keep (tall rectangular tower) with battlements.
+    """Create a central keep with battlements on all four sides.
 
     Args:
         width (float):        Keep width and depth. Default 6.
@@ -115,25 +153,55 @@ def create_keep(width=6, floors=3, floor_height=4, position=(0, 0, 0)):
         position (tuple):     (x, y, z) base center.
 
     Returns:
-        str: Name of the keep group.
+        str: Name of the keep group, or None on failure.
     """
+    if DEBUG:
+        print("[DEBUG] create_keep: w={}, floors={}, pos={}".format(
+            width, floors, position))
+
+    if width <= 0:
+        cmds.warning("Invalid keep width {} -- using default 6".format(width))
+        width = 6
+    if floors <= 0:
+        cmds.warning("Invalid floor count {} -- using default 3".format(floors))
+        floors = 3
+
     total_height = floor_height * floors
 
-    body = cmds.polyCube(
-        w=width, h=total_height, d=width,
-        name="keep_body_#"
-    )[0]
-    cmds.move(
-        position[0], position[1] + total_height / 2.0, position[2], body
-    )
+    try:
+        body = cmds.polyCube(
+            w=width, h=total_height, d=width,
+            name="keep_body_#"
+        )[0]
+        cmds.move(
+            position[0], position[1] + total_height / 2.0, position[2], body
+        )
+    except Exception as error:
+        cmds.warning("Failed to create keep body: {}".format(error))
+        return None
 
-    # Battlements on top
-    merlons = create_merlons(
+    parts = [body]
+    half = width / 2.0
+
+    # Merlons on all 4 sides
+    north = create_merlons(
         length=width, wall_height=total_height,
-        position=position, axis="x"
+        position=(position[0], position[1], position[2] + half), axis="x"
     )
+    south = create_merlons(
+        length=width, wall_height=total_height,
+        position=(position[0], position[1], position[2] - half), axis="x"
+    )
+    east = create_merlons(
+        length=width, wall_height=total_height,
+        position=(position[0] + half, position[1], position[2]), axis="z"
+    )
+    west = create_merlons(
+        length=width, wall_height=total_height,
+        position=(position[0] - half, position[1], position[2]), axis="z"
+    )
+    parts.extend(north + south + east + west)
 
-    parts = [body] + merlons
     return cmds.group(parts, name="keep_#")
 
 
@@ -149,28 +217,35 @@ def create_gatehouse(width=2.5, height=3.5, tower_radius=1.0,
         position (tuple):     (x, y, z) center of gate.
 
     Returns:
-        str: Name of the gatehouse group.
+        str: Name of the gatehouse group, or None on failure.
     """
+    if DEBUG:
+        print("[DEBUG] create_gatehouse: w={}, pos={}".format(width, position))
+
     parts = []
 
-    # Gate opening marker
-    gate = cmds.polyCube(
-        w=width, h=height, d=0.8,
-        name="gate_opening_#"
-    )[0]
-    cmds.move(
-        position[0], position[1] + height / 2.0, position[2], gate
-    )
-    parts.append(gate)
+    try:
+        gate = cmds.polyCube(
+            w=width, h=height, d=0.8,
+            name="gate_opening_#"
+        )[0]
+        cmds.move(
+            position[0], position[1] + height / 2.0, position[2], gate
+        )
+        parts.append(gate)
+    except Exception as error:
+        cmds.warning("Failed to create gate opening: {}".format(error))
+        return None
 
-    # Flanking towers
+    # Flanking towers (reuse create_tower)
     for side in [1, -1]:
         tower = create_tower(
             radius=tower_radius,
             height=tower_height,
             position=(position[0] + side * width, position[1], position[2])
         )
-        parts.append(tower)
+        if tower:
+            parts.append(tower)
 
     return cmds.group(parts, name="gatehouse_#")
 
@@ -179,10 +254,16 @@ def create_gatehouse(width=2.5, height=3.5, tower_radius=1.0,
 if __name__ == "__main__":
     cmds.file(new=True, force=True)
 
+    # Test normal usage
     create_wall(length=12, height=5, position=(0, 0, 6))
     create_tower(radius=1.5, height=8, position=(6, 0, 6))
     create_keep(width=5, floors=3, position=(0, 0, 0))
     create_gatehouse(position=(0, 0, -6))
+
+    # Test error handling
+    print("\n--- Error handling tests ---")
+    create_wall(length=-5, height=0)      # Should warn, use defaults
+    create_tower(radius=-1, height=-3)    # Should warn, use defaults
 
     cmds.viewFit(allObjects=True)
     print("fortress_geometry self-test complete!")
